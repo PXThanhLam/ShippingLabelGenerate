@@ -63,8 +63,8 @@ class FormRegions(object):
         good = label[area > self.minArea]
         area = area[area > self.minArea]
         filt,R = [],[]
-        debug_im =  np.zeros_like(seg)
-        debug_im = np.stack([debug_im,debug_im,debug_im]).transpose(1,2,0)
+        # debug_im =  np.zeros_like(seg)
+        # debug_im = np.stack([debug_im,debug_im,debug_im]).transpose(1,2,0)
         for idx,i in enumerate(good):
             mask = seg==i
             xs,ys = np.where(mask) 
@@ -78,13 +78,13 @@ class FormRegions(object):
                 and w > self.minWidth
                 and self.minAspect < w/h < self.maxAspect
                 and area[idx]/ (w*h) > self.pArea)
-            if f :
-                color = np.array([np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)])
-                for x_ , y_ in zip(xs,ys):
-                    debug_im[x_][y_] = color
+            # if f :
+            #     color = np.array([np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)])
+            #     for x_ , y_ in zip(xs,ys):
+            #         debug_im[x_][y_] = color
             filt.append(f)
             R.append(rot)
-        cv2.imwrite('debug1.png', debug_im)
+        # cv2.imwrite('debug1.png', debug_im)
 
         filt = np.array(filt)
         area = area[filt]
@@ -142,8 +142,8 @@ class FormRegions(object):
                       'support':[],
                       'rot':[],
                       'area':[]}
-        debug_im =  np.zeros_like(seg)
-        debug_im = np.stack([debug_im,debug_im,debug_im]).transpose(1,2,0)
+        # debug_im =  np.zeros_like(seg)
+        # debug_im = np.stack([debug_im,debug_im,debug_im]).transpose(1,2,0)
         for idx,l in enumerate(regions['label']):
             mask = seg==l
             pt_sample = self.sample_grid_neighbours(mask,self.ransac_fit_trials,step=7)
@@ -164,11 +164,11 @@ class FormRegions(object):
                     plane_info['rot'].append(regions['rot'][idx])
                     plane_info['area'].append(regions['area'][idx])
 
-                    xs,ys = np.where(mask) 
-                    color = np.array([np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)])
-                    for x_ , y_ in zip(xs,ys):
-                        debug_im[x_][y_] = color
-        cv2.imwrite('debug2.png', debug_im)
+                    # xs,ys = np.where(mask) 
+                    # color = np.array([np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)])
+                    # for x_ , y_ in zip(xs,ys):
+                    #     debug_im[x_][y_] = color
+        # cv2.imwrite('debug2.png', debug_im)
         return plane_info
 
     def get_regions(self,xyz,seg,area,label):
@@ -356,8 +356,8 @@ class RendererV3(object):
         return regions
 
     def filter_for_placement(self,xyz,seg,regions):
-        debug_im =  np.zeros_like(seg)
-        debug_im = np.stack([debug_im,debug_im,debug_im]).transpose(1,2,0)
+        # debug_im =  np.zeros_like(seg)
+        # debug_im = np.stack([debug_im,debug_im,debug_im]).transpose(1,2,0)
         filt = np.zeros(len(regions['label'])).astype('bool')
         masks,Hs,Hinvs = [],[], []
         for idx,l in enumerate(regions['label']):
@@ -369,16 +369,16 @@ class RendererV3(object):
                 Hinvs.append(Hinv)
                 filt[idx] = True
 
-                xs,ys =   np.where(seg == l) 
-                color = np.array([np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)])
-                for x_ , y_ in zip(xs,ys):
-                    debug_im[x_][y_] = color
+                # xs,ys =   np.where(seg == l) 
+                # color = np.array([np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)])
+                # for x_ , y_ in zip(xs,ys):
+                #     debug_im[x_][y_] = color
         regions = self.filter_regions(regions,filt)
         regions['place_mask'] = masks
         regions['homography'] = Hs
         regions['homography_inv'] = Hinvs
 
-        cv2.imwrite('debug3.png', debug_im)
+        # cv2.imwrite('debug3.png', debug_im)
         return regions
 
     def warpHomography(self,src_mat,H,dst_size):
