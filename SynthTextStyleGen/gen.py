@@ -11,7 +11,6 @@ from skimage.measure import label
 from skimage.util import dtype
 from synthgen import *
 from common import *
-import wget, tarfile
 from collections import Counter
 import json
 from pycocotools import mask as pycoco_mask
@@ -23,9 +22,9 @@ INSTANCE_PER_IMAGE = 1 # no. of times to use the same image
 SECS_PER_IMG = 30 #max time per image in seconds
 
 # path to the data-file, containing image, depth and segmentation:
-BACKGROUND_ROOT = 'depth_segm' 
-DEPTH_ROOT = ''
-FOREGROUND_ROOT = '../crawl_data/download_images/Foreground_Extract' 
+BACKGROUND_ROOT = '/home/tl/CYBER_WFH/Gen_data_form/ShippingLabelGenerate/crawl_data/download_images/back_ground_mini' 
+DEPTH_ROOT = '/home/tl/CYBER_WFH/Gen_data_form/ShippingLabelGenerate/crawl_data/download_images/output_monodepth_mini'
+FOREGROUND_ROOT = '/home/tl/CYBER_WFH/Gen_data_form/ShippingLabelGenerate/crawl_data/download_images/Foreground_Extract' 
 # url of the data (google-drive public file):
 WRITE_IMG_PATH = 'results/img'
 WRITE_ANNO_PATH = 'results/annotation'
@@ -47,13 +46,15 @@ def segment_im(image):
 def main(start_idx):
   all_img = os.listdir(BACKGROUND_ROOT)
   for im_index,im_file in enumerate(all_img[start_idx:start_idx+num_gen]):
+    np.random.seed()
+    im_file = all_img[np.random.randint(0,len(all_img))]
     img = cv2.imread(BACKGROUND_ROOT + '/' + im_file)
-    depth = cv2.imread(DEPTH_ROOT + '/' + im_file)
+    depth = cv2.imread(DEPTH_ROOT + '/' + im_file.split('.')[0] + '.jpg')
     if depth is None:
       continue
     depth = depth[:,:,0]
     seg = segment_im(img)
-    for im_index_2 in range(4):
+    for im_index_2 in range(1):
       try:
         bgr_h,bgr_w,_ = img.shape
         big_size_low = int(max(BGR_MIN_SIZE,max(bgr_h,bgr_w)*0.8))
@@ -88,6 +89,8 @@ def main(start_idx):
         result_img,anno_json = RV3.render_form(img,depth,seg,area,label,
                               ninstance=1)
         anno_json["images"][0]["file_name"] = 'synth_text_style_' + str(im_index) + '.png'
+        if len(anno_json['annotations']) <= 1:
+          continue
 
         bgr_h,bgr_w,_ = img.shape
         # for anno in anno_json['annotations']:
@@ -117,7 +120,7 @@ def main(start_idx):
         #           result_img = cv2.putText(result_img, text, (int(point[0]) - 20, int(point[1]) - 20),cv2.FONT_HERSHEY_SIMPLEX, 0.4 ,rand_color, 1)
 
 
-        cv2.imwrite(WRITE_IMG_PATH + '/0' + str(start_idx) + '_' + str(im_index) + '_' + str(im_index_2) + '.png', result_img)
+        cv2.imwrite(WRITE_IMG_PATH + '/0' + str(start_idx) + '_' + str(im_index) + '_' + str(im_index_2) + '.jpg', result_img)
         with open(WRITE_ANNO_PATH + '/0' + str(start_idx) + '_' + str(im_index) + '_' + str(im_index_2) + '.json', 'w') as f:
           json.dump(anno_json, f, default=myconverter)
 

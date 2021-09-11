@@ -50,15 +50,21 @@ def contrast_(data_rng, image, gs, gs_mean, var, const_var = None):
         alpha = 1. + data_rng.uniform(low=-var, high=var)
     blend_(alpha, image, gs_mean)
 
-def color_jittering_(data_rng, image, eig_val, eig_vec, const_var = None, const_light = None):
+def color_jittering_(data_rng, image, const_var = None, const_light = None):
+    eig_val = np.array([0.2141788, 0.01817699, 0.00341571], dtype=np.float32)
+    eig_vec = np.array([
+        [-0.58752847, -0.69563484, 0.41340352],
+        [-0.5832747, 0.00994535, -0.81221408],
+        [-0.56089297, 0.71832671, 0.41158938]
+    ], dtype=np.float32)
     functions = [brightness_, contrast_, saturation_]
     random.shuffle(functions)
 
     gs = grayscale(image)
     gs_mean = gs.mean()
     for f in functions:
-        f(data_rng, image, gs, gs_mean, 0.2, const_var)
-    lighting_(data_rng, image, 0.05, eig_val, eig_vec,const_light)
+        f(data_rng, image, gs, gs_mean, 0.25, const_var)
+    lighting_(data_rng, image, 0.1, eig_val, eig_vec,const_light)
 
 def gaussian_blurr(image, rand = 0.8) :
     if random.random() > rand :
@@ -138,8 +144,8 @@ def random_affine(img, mask,degrees=(-180, 180), keypoint = None, shear=(-0.02, 
         keypoint = keypoint[:,:2]
     return imw, mask, keypoint
 
-def foreground_random_transform(img, data_rng, eig_val, eig_vec, fgr_mask, keypoint, degree = (-180,180),const_var = None, const_light = None,
-                               perpective_rand = 0.0, affine_rand = 0.8 ):
+def foreground_random_transform(img, data_rng, fgr_mask, keypoint, degree = (-180,180),const_var = None, const_light = None,
+                               perpective_rand = 0.15, affine_rand = 0.8 ):
     img = np.array(img / 255.0, dtype = np.float32)
     # color_jittering_(data_rng, img, eig_val, eig_vec,const_var, const_light)
     # img = gaussian_blurr(img)
@@ -150,6 +156,52 @@ def foreground_random_transform(img, data_rng, eig_val, eig_vec, fgr_mask, keypo
     img = np.clip(img * 255,0,255)
 
     return img, fgr_mask, keypoint
+
+def get_avg_brightness(img):
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    return np.mean(v)
+
+
+def get_avg_saturation(img):
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    return np.mean(s)
+
+def change_brightness(img, value=1.0):
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    v = value * v
+    v[v > 255] = 255
+    v = np.asarray(v, dtype=np.float32)
+    final_hsv = cv2.merge((h, s, v))
+    img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    return img
+
+
+def change_saturation(img, value=1.0):
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    s = value * s
+    s[s > 255] = 255
+    s = np.asarray(s, dtype=np.float32)
+    final_hsv = cv2.merge((h, s, v))
+    img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    return img
+
+def fgr_blend_change(fgr,bgr,fgr_satur = None, fgr_bright = None ,bgr_satur = None, bgr_bright = None):
+    fgr_brightness = fgr_bright if fgr_bright is not None else get_avg_brightness(fgr)
+    bgr_brightness = bgr_bright if bgr_bright is not None else get_avg_brightness(bgr)
+    delta_b = 1 + (bgr_brightness - fgr_brightness) / 255
+    fgr_change = change_brightness(fgr, delta_b)
+
+    # Adjust Saturation
+    fgr_saturation = fgr_satur if fgr_satur is not None else get_avg_saturation(fgr)
+    bgr_saturation = bgr_satur if bgr_satur is not None else get_avg_saturation(bgr)
+    delta_s = 1 - (bgr_saturation - fgr_saturation) / 255
+    fgr_change = change_saturation(fgr_change, delta_s)
+    return fgr_change
+    
     
 if __name__ == '__main__':
     img = cv2.imread('crawl_data/download_images/Foreground_Extract/bill_29.jpeg')

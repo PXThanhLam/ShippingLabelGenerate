@@ -71,13 +71,13 @@ class RenderForm(object):
         bgr = np.zeros((h * 3, w * 3, 3))
         bgr[h : 2*h, w : 2*w, : ] = form
         fgr_img = bgr
-        st_border = 5
+        st_border = 7
         mask = np.zeros((h * 3, w * 3))
         mask[h + st_border : 2*h - st_border, w + st_border : 2*w - st_border ] = 1
         keypoints = [[w + st_border, h + st_border],[2*w - st_border, h + st_border],
                       [w + st_border, 2*h -st_border],[2*w -st_border, 2*h - st_border]]
         keypoints = np.array(keypoints, dtype=np.float32)
-        fgr_img, mask, keypoints = foreground_random_transform(fgr_img, data_rng, eig_val, eig_vec, mask, degree = (-30,30), keypoint=keypoints)
+        fgr_img, mask, keypoints = foreground_random_transform(fgr_img, data_rng, mask, perpective_rand = 0.0, degree = (-40,40), keypoint=keypoints)
         i, j = np.where(mask)
         if len(i) == 0 or len(j) == 0 :
             return None,None,None
@@ -112,7 +112,7 @@ class RenderForm(object):
         # cv2.imwrite('debug.png',result_img)
         # print('------')            
 
-        print(form.shape)
+        # print(form.shape)
 
         return form_mask, form_img,keypoints
 
@@ -193,7 +193,7 @@ class FormState(object):
         self.all_form_img = np.array([self.form_dir + '/' + path for path in os.listdir(self.form_dir)])
     def sample(self):
         select_foreground = self.all_form_img[np.random.randint(0,len(self.all_form_img) - 1, size = 1)][0]
-        return cv2.cvtColor(cv2.imread(select_foreground), cv2.COLOR_RGB2BGR)
+        return cv2.imread(select_foreground)
     def get_aspect_ratio(self, form, size=None):
         """
         Returns the median aspect ratio of each character of the font.

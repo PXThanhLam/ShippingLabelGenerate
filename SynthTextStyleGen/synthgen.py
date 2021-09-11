@@ -1,4 +1,7 @@
 from __future__ import division
+import sys
+sys.path.append('../NaiveGen')
+from augment_util_2d import get_avg_brightness, get_avg_saturation
 import copy
 import cv2
 import h5py
@@ -16,6 +19,7 @@ from common import *
 import traceback, itertools
 import form_utils as fu
 from skimage.filters import gaussian
+from augment_util_2d import *
 
 
 
@@ -340,7 +344,7 @@ class RendererV3(object):
         self.min_char_height = 8 #px
         self.min_asp_ratio = 0.4 #
 
-        self.max_form_regions = 20
+        self.max_form_regions = 25
         self.max_num_form = 50
         self.max_time = max_time
         self.form_region = FormRegions(height=im_h,width=im_w)
@@ -411,8 +415,13 @@ class RendererV3(object):
         bbs_h = np.reshape(bbs_h, (3,4,n), order='F')
         return bbs_h[:2,:,:]
 
-    def place_form(self,rgb,collision_mask,H,Hinv,num_blend_form):
+    def place_form(self,rgb,collision_mask,H,Hinv,num_blend_form,is_color_blend = True):
         form = self.form_renderer.form_state.sample()
+        form = np.array(form, dtype = np.float32)
+        data_rng = np.random.RandomState(123)
+        if not is_color_blend :
+            color_jittering_(data_rng,form)
+        form_bright, form_satur = get_avg_brightness(form), get_avg_saturation(form)
 
         render_res = self.form_renderer.render_sample(form,collision_mask,num_blend_form)
         if render_res is None: # rendering not successful
@@ -435,6 +444,13 @@ class RendererV3(object):
         form_mask_res = form_mask.copy()
         form_mask  = np.stack([form_mask,form_mask,form_mask]).transpose(1,2,0)
         form_mask = np.array(form_mask * 255 , dtype = np.uint8)
+        
+        x1, y1, x2, y2 = \
+            min(keypoint_res[:,0]),min(keypoint_res[:,1]), max(keypoint_res[:,0]), max(keypoint_res[:,1])
+        x1,y1,x2,y2 = int(x1),int(y1),int(x2),int(y2)
+        if is_color_blend:
+            form_img = fgr_blend_change(np.array(form_img,dtype=np.float32), np.array(rgb[y1:y2,x1:x2,:],dtype = np.float32), fgr_satur = form_satur, fgr_bright = form_bright) 
+        
 
         # rgb = np.array(rgb,dtype=np.uint8)
         # form_img = np.array(form_img,dtype=np.uint8)
@@ -507,19 +523,15 @@ class RendererV3(object):
             # depth -> xyz
             xyz = su.DepthCamera.depth2xyz(depth)
             
-            # find text-regions:
             regions = self.form_region.get_regions(xyz,seg,area,label)
 
             # find the placement mask and homographies:
             regions = self.filter_for_placement(xyz,seg,regions)
 
-            # finally place some text:
             nregions = len(regions['place_mask'])
-            if nregions < 1: # no good region to place text on
+            if nregions < 1: # no good region to place  on
                 return []
         except:
-            # failure in pre-text placement
-            #import traceback
             traceback.print_exc()
             return []
 
@@ -539,24 +551,24 @@ class RendererV3(object):
             all_masks = []
 
             # process regions: 
-            total_form_blend = rand_int_gaussian(1, 50, 15)
+            total_form_blend = rand_int_gaussian(1, 50, 14)
             num_form_regions = len(reg_idx)
             reg_range = np.arange(num_form_regions)
+            is_color_blend = True if np.random.uniform() >= 0.25 else False
             for idx in reg_range:
                 ireg = reg_idx[idx]
-                num_blend_form = rand_int_gaussian(1,7, min(4,max(3,total_form_blend//num_form_regions)))
-                print(num_blend_form)
+                num_blend_form = rand_int_gaussian(1,7, min(3,max(3,total_form_blend//num_form_regions)))
                 for _ in range(num_blend_form) :
                     try:
                         if self.max_time is None:
                             form_render_res = self.place_form(img,place_masks[ireg],
                                                             regions['homography'][ireg],
-                                                            regions['homography_inv'][ireg],num_blend_form)
+                                                            regions['homography_inv'][ireg],num_blend_form,is_color_blend)
                         else:
                             with time_limit(self.max_time):
                                 form_render_res = self.place_form(img,place_masks[ireg],
                                                                 regions['homography'][ireg],
-                                                                regions['homography_inv'][ireg],num_blend_form)
+                                                                regions['homography_inv'][ireg],num_blend_form,is_color_blend)
                     except TimeoutException as msg:
                         print (msg)
                         continue
@@ -585,7 +597,7 @@ class RendererV3(object):
             min_box_w = min([box[1][0] - box[0][0] for box in all_bbs])
             max_cross_h = min(int(min_box_h * 1.2), bgr_h // 5)
             max_cross_w = min(int(min_box_w * 1.2), bgr_w // 5)
-            if np.random.uniform() <= 0.4 :
+            if np.random.uniform() <= 0.3 :
                 num_cross = rand_int_gaussian(1,6,3)
                 for _ in range(num_cross) :
                     rand_color = np.array((np.random.uniform(0,255), np.random.uniform(0,255), np.random.uniform(0,255)),dtype = np.uint8)
