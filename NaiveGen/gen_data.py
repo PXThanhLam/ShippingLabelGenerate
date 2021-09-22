@@ -75,11 +75,11 @@ def main(start_idx) :
         st = time.time()
         np.random.seed()
         const_var, const_light = np.random.uniform(0,0.2), np.random.uniform(0,0.02)
-        if np.random.uniform(0,1) <= 0.27 :
+        if np.random.uniform(0,1) <= 0.3 :
             low, high, mean = 2,8,6
             gen_big_form = True
         else:
-            low, high, mean = 1,50,8
+            low, high, mean = 1,50,9
             gen_big_form = False
 
         select_foregrounds = all_foreground_img[np.random.randint(0,len(all_foreground_img) - 1, size = rand_int_gaussian(low, high, mean))]
@@ -100,10 +100,14 @@ def main(start_idx) :
         black_bgr = np.zeros((bgr_h,bgr_w))
         keypoints_anno = []
 
-        gen_follow_layout = True if np.random.uniform() >= 0.67 else False
-        fgr_follow_layout =  True if np.random.uniform() >= 0.15 else False
+        gen_follow_layout = True if np.random.uniform() >= 0.7 else False
+        fgr_follow_layout =  True if np.random.uniform() >= 0.1 else False
 
         if gen_follow_layout and fgr_follow_layout and np.random.uniform() >= 0.8 :
+            select_foregrounds = list(all_foreground_img[np.random.randint(0,len(all_foreground_img) - 1, size = 1)]) * rand_int_gaussian(low, high, mean)
+        elif not gen_follow_layout and gen_big_form:
+            if np.random.uniform() >= 0.3:
+                low, high, mean = 1,45,9
             select_foregrounds = list(all_foreground_img[np.random.randint(0,len(all_foreground_img) - 1, size = 1)]) * rand_int_gaussian(low, high, mean)
 
         layouts_gen = gen_layout(bgr_w, bgr_h, len(select_foregrounds) ) if gen_follow_layout else None
@@ -180,28 +184,35 @@ def main(start_idx) :
             keypoints = [[fgr_im_w + st_border, fgr_im_h + st_border],[2*fgr_im_w - st_border, fgr_im_h + st_border],
                             [fgr_im_w + st_border, 2*fgr_im_h -st_border],[2*fgr_im_w -st_border, 2*fgr_im_h - st_border]]
             keypoints = np.array(keypoints, dtype=np.float32)
-            if gen_big_form or fgr_follow_layout:
+            if  gen_follow_layout and fgr_follow_layout:
                 if np.random.uniform(0,1) <= 0.7:
                     degree = (-7,7)
-                elif np.random.uniform(0,1) <= 0.72:
+                elif np.random.uniform(0,1) <= 0.75:
                     degree = (-15,15)
-                elif np.random.uniform(0,1) <= 0.8:
+                elif np.random.uniform(0,1) <= 0.85:
                     degree = (-30,30)
                 elif np.random.uniform(0,1) <= 0.9:
                     degree = (-60,60)
                 else:
                     degree = (-180,180)
             else:
-                if np.random.uniform(0,1) <= 0.3:
-                    degree = (-7,7)
-                elif np.random.uniform(0,1) <= 0.4:
-                    degree = (-15,15)
-                elif np.random.uniform(0,1) <= 0.5:
-                    degree = (-30,30)
-                elif np.random.uniform(0,1) <= 0.6:
-                    degree = (-60,60)
+                # if np.random.uniform(0,1) <= 0.15:
+                #     degree = (-7,7)
+                # elif np.random.uniform(0,1) <= 0.2:
+                #     degree = (-15,15)
+                # elif np.random.uniform(0,1) <= 0.25:
+                #     degree = (-30,30)
+                # elif np.random.uniform(0,1) <= 0.3:
+                #     degree = (-60,60)
+                # else:
+                #     degree = (-180,180)
+                if np.random.uniform() <= 0.15 :
+                    degree = (-180,-60)
+                elif np.random.uniform() <= 0.3 :
+                    degree = (60,180)
                 else:
                     degree = (-180,180)
+
 
             fgr_img, mask, keypoints = foreground_random_transform(fgr_img, data_rng, mask, degree = degree, keypoint=keypoints)
 

@@ -45,7 +45,7 @@ def segment_im(image):
 
 def main(start_idx):
   all_img = os.listdir(BACKGROUND_ROOT)
-  for im_index,im_file in enumerate(all_img[start_idx:start_idx+num_gen]):
+  for im_index in range(num_gen):
     np.random.seed()
     im_file = all_img[np.random.randint(0,len(all_img))]
     img = cv2.imread(BACKGROUND_ROOT + '/' + im_file)

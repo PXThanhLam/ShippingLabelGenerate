@@ -71,7 +71,7 @@ class RenderForm(object):
         bgr = np.zeros((h * 3, w * 3, 3))
         bgr[h : 2*h, w : 2*w, : ] = form
         fgr_img = bgr
-        st_border = 7
+        st_border = 9
         mask = np.zeros((h * 3, w * 3))
         mask[h + st_border : 2*h - st_border, w + st_border : 2*w - st_border ] = 1
         keypoints = [[w + st_border, h + st_border],[2*w - st_border, h + st_border],
